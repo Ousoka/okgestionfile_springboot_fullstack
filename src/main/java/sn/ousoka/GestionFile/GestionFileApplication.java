@@ -4,32 +4,22 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import sn.ousoka.GestionFile.model.Location;
 import sn.ousoka.GestionFile.model.OKService;
 import sn.ousoka.GestionFile.repository.LocationRepository;
 import sn.ousoka.GestionFile.repository.ServiceRepository;
 
 @SpringBootApplication
-public class GestionFileApplication extends SpringBootServletInitializer {
+public class GestionFileApplication  {
 
     public static void main(String[] args) {
         SpringApplication.run(GestionFileApplication.class, args);
     }
 
-    // Override the configure method for servlet container initialization
-    @Override
-    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-        return application.sources(GestionFileApplication.class);
-    }
-
-    // Seed the database if it's empty
     @Bean
     public CommandLineRunner seedDatabase(ServiceRepository serviceRepository, LocationRepository locationRepository) {
         return args -> {
 
-            // Check and seed locations if not already present
             if (locationRepository.count() == 0) {
                 Location dakar = new Location();
                 dakar.setName("Dakar");
@@ -48,7 +38,6 @@ public class GestionFileApplication extends SpringBootServletInitializer {
                 System.out.println("Des emplacements existent déjà. Sauter l'ensemencement");
             }
 
-            // Check and seed services if not already present
             if (serviceRepository.count() == 0) {
                 OKService senelec = new OKService();
                 senelec.setName("Senelec");
