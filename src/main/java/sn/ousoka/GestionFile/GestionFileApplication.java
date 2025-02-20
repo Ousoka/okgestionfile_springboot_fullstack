@@ -8,9 +8,10 @@ import sn.ousoka.GestionFile.model.Location;
 import sn.ousoka.GestionFile.model.OKService;
 import sn.ousoka.GestionFile.repository.LocationRepository;
 import sn.ousoka.GestionFile.repository.ServiceRepository;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 
 @SpringBootApplication
-public class GestionFileApplication {
+public class GestionFileApplication extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
         SpringApplication.run(GestionFileApplication.class, args);
