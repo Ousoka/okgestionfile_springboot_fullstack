@@ -3,9 +3,9 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 FROM openjdk:17.0.1-jdk-slim
-COPY --from=build /target/GestionFile-0.0.1-SNAPSHOT.jar GestionFile.jar
+COPY --from=build /target/GestionFile-0.0.1-SNAPSHOT.war GestionFile.war
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","GestionFile.jar"]
+ENTRYPOINT ["java","-war","GestionFile.war"]
 
 # FROM openjdk:17-jdk-alpine
 # WORKDIR /GestionFile
