@@ -10,7 +10,7 @@ import sn.ousoka.GestionFile.repository.LocationRepository;
 import sn.ousoka.GestionFile.repository.ServiceRepository;
 
 @SpringBootApplication
-public class GestionFileApplication  {
+public class GestionFileApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(GestionFileApplication.class, args);

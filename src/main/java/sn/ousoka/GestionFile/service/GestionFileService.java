@@ -37,7 +37,7 @@ public class GestionFileService {
 
     private static final Logger log = LoggerFactory.getLogger(GestionFileService.class);
 
-
+    // recuperation de tous les services disponibles dans la base de donnees
     public List<OKService> getAllServices() {
     
         List<OKService> services = serviceRepository.findAll();
@@ -47,25 +47,27 @@ public class GestionFileService {
         return services;
     }
 
-
+    // recuperation de toutes les localisations disponibles dans la base de donnees
     public List<Location> getAllLocations() {
         return locationRepository.findAll();
     }
 
-
+    // recuperation de la liste des tickets suivant le service (a partir de son id)
     public List<Ticket> getTicketsForService(int serviceId) {
         return ticketRepository.findByServiceId(serviceId);
     }
 
+    // recuperation du service a partir de son id (encapsule dans un optional pour eviter la violente erreur : NullPointerException)
     public Optional<OKService> getServiceById(int serviceId) {
         return serviceRepository.findById(serviceId);
     }
 
+    // recuperation de la location a partir de son id (encapsule dans un optional)
     public Optional<Location> getLocationById(int locationId) {
         return locationRepository.findById(locationId);
     }
 
-
+    // creation d'un ticker pour un utilisateur
     public Ticket createTicket(OKService service, Location location, User user) {
         Ticket ticket = new Ticket();
         ticket.setService(service);
@@ -91,12 +93,14 @@ public class GestionFileService {
         return ticket;
     }
 
+
+    // recuperation du nombre de personnes devant 
     public int getPeopleAhead(int ticketId, int serviceId, int locationId) {
         // recup le ticket actuel
         Ticket currentTicket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid ticket ID"));
 
-        // Compter les tickets ayant une position < dans la même file 
+        // Compter les tickets ayant une position < au current ticket dans la même file 
         return ticketRepository.countByServiceAndLocationAndPositionInQueueLessThan(
                 serviceId, locationId, currentTicket.getPositionInQueue());
     }
@@ -118,35 +122,11 @@ public class GestionFileService {
     }
 
 
-    public Optional<Ticket> startNextTicket(int serviceId, int locationId) {
-    Optional<Ticket> currentTicket = getCurrentTicket(serviceId, locationId);
-
-    //si un ticket est en cours 
-    if (currentTicket.isPresent()) {
-        return currentTicket; //le retourner
-    }
-
-    // trouver le prochain ticket en attente
-    Optional<Ticket> nextTicket = ticketRepository.findFirstByServiceIdAndLocationIdAndStatusOrderByPositionInQueueAsc(
-        serviceId, locationId, TicketStatus.EN_ATTENTE
-    );
-
-    // si un nextTicket exist -> le mettre en cours
-    if (nextTicket.isPresent()) {
-        Ticket ticket = nextTicket.get();
-        ticket.setStatus(TicketStatus.EN_COURS);
-        ticketRepository.save(ticket);
-    }
-
-        return nextTicket;
-    }
-
-
     public void updateTicket(Ticket ticket) {
         ticketRepository.save(ticket);
     }
 
-
+    // mis a jour du statut du ticket par l'agent (precedent/suivant)
     public void updateTicketStatus(int ticketId, String action) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("ID du ticket invalid"));

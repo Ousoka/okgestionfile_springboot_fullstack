@@ -9,11 +9,11 @@
 </head>
 <body>
     <div class="container mt-4">
-        <h1>Agent - Gestion File</h1>
+        <h1>Agent - Gestion File (${serviceName} de ${locationName})</h1>
         
         <!-- Display user details in your JSP page -->
         <c:if test="${not empty user}">
-            <p>BIenvenue, ${user.prenom} ${user.nom}</p>
+            <p>Bienvenue, ${user.prenom} ${user.nom}</p>
         </c:if>
         <c:if test="${empty user}">
             <p>Utilisateur introuvable!</p>

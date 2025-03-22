@@ -72,34 +72,6 @@ public class GestionFileController {
     }
 
 
-//     @GetMapping("/")
-//     public String index() {
-//         return "home";
-//     }
-
-//     @GetMapping("/login")
-//     public String login_page() {
-//         return "login";
-//     }
-
-// @PostMapping("/login")
-// public String login(@RequestParam String numeroTel, @RequestParam String password, Model model) {
-//     log.debug("Received login attempt with phone: [{}]", numeroTel);
-//     log.debug("Received password: [{}]", password);
-
-//     try {
-//         Authentication authentication = authenticationManager.authenticate(
-//             new UsernamePasswordAuthenticationToken(numeroTel, password)
-//         );
-//         SecurityContextHolder.getContext().setAuthentication(authentication);
-//         return "redirect:/client";
-//     } catch (BadCredentialsException e) {
-//         log.error("Authentication failed for phone number: {}", numeroTel, e);
-//         model.addAttribute("error", "Invalid phone number or password.");
-//         return "login";
-//     }
-// }
-
 
     @GetMapping("/")
     public String index() {
@@ -111,39 +83,6 @@ public class GestionFileController {
         return "login";
     }
 
-// @PostMapping("/login")
-// public String login(@RequestParam String numeroTel, @RequestParam String password, Model model) {
-//     log.debug("Login attempt with phone: [{}]", numeroTel);
-
-//     try {
-//         Authentication authentication = authenticationManager.authenticate(
-//             new UsernamePasswordAuthenticationToken(numeroTel, password)
-//         );
-
-//         SecurityContextHolder.getContext().setAuthentication(authentication);
-
-//         // Get user role
-//         String role = authentication.getAuthorities().iterator().next().getAuthority();
-
-//         log.info("User [{}] logged in with role [{}]", numeroTel, role);
-
-//         // Redirect based on role (no 'ROLE_' prefix)
-//         if ("CLIENT".equals(role)) {
-//             return "redirect:/client";  // Redirect to client page
-//         } else if ("AGENT".equals(role)) {
-//             return "redirect:/agent";  // Redirect to agent page
-//         } else if ("ADMIN".equals(role)) {
-//             return "redirect:/admin";  // Redirect to admin page
-//         } else {
-//             return "redirect:/home";  // Default redirect
-//         }
-
-//     } catch (BadCredentialsException e) {
-//         log.error("Authentication failed for phone: {}", numeroTel, e);
-//         model.addAttribute("error", "Invalid phone number or password.");
-//         return "login";  // Stay on login page if authentication fails
-//     }
-// }
 @PostMapping("/login")
 public String login(@RequestParam String numeroTel, 
                     @RequestParam String password, 
@@ -210,22 +149,6 @@ public String login(@RequestParam String numeroTel,
     public String home() {
         return "home"; // This corresponds to home.jsp
     }
-
-    // @GetMapping("/client_home")
-    // public String clientHome(Model model, HttpSession session) {
-    //     // Replace the Optional<User> handling
-    //     String numeroTel = (String) session.getAttribute("numeroTel");
-    //     Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
-        
-    //     if (userOptional.isPresent()) {
-    //         User user = userOptional.get(); // Get the User object from Optional
-    //         model.addAttribute("user", user); // Add user to the model
-    //     } else {
-    //         model.addAttribute("user", null); // Handle the case where no user is found
-    //     }
-
-    //     return "client_home";
-    // }
 
     @GetMapping("/client_home")
     public String clientHome(Model model, HttpSession session) {
@@ -542,268 +465,241 @@ public String deleteUser(@PathVariable("id") int id, Model model) {
     }
 
     @GetMapping("/agent/ticket/status")
-public String updateTicketStatus(@RequestParam(required = false) Integer ticketId,
-                                 @RequestParam(required = false) Integer serviceId,
-                                 @RequestParam(required = false) Integer locationId,
-                                 @RequestParam String action,
-                                 Model model, HttpSession session) {
+    public String updateTicketStatus(@RequestParam(required = false) Integer ticketId,
+                                    @RequestParam(required = false) Integer serviceId,
+                                    @RequestParam(required = false) Integer locationId,
+                                    @RequestParam String action,
+                                    Model model, HttpSession session) {
 
-    // Retrieve user details from session (number and service)
-    String numeroTel = null;
+        // Retrieve user details from session (number and service)
+        String numeroTel = null;
 
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    if (auth != null && auth.getPrincipal() instanceof UserDetails) {
-        numeroTel = ((UserDetails) auth.getPrincipal()).getUsername();
-    } else {
-        numeroTel = (String) session.getAttribute("numeroTel");
-    }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetails) {
+            numeroTel = ((UserDetails) auth.getPrincipal()).getUsername();
+        } else {
+            numeroTel = (String) session.getAttribute("numeroTel");
+        }
 
-    Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
-    if (!userOptional.isPresent()) {
-        model.addAttribute("error", "User not found.");
-        return "error"; // User not found
-    }
+        Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
+        if (!userOptional.isPresent()) {
+            model.addAttribute("error", "User not found.");
+            return "error"; // User not found
+        }
 
-    User user = userOptional.get();
-    locationId = locationId == null ? user.getLocationId() : locationId;
-    serviceId = serviceId == null ? user.getServiceId() : serviceId;
-
-    // Validate that all required parameters are present
-    if (ticketId == null || ticketId == 0) {
-        model.addAttribute("error", "Missing ticket ID.");
-        return "error"; // Return to error page if parameters are missing
-    }
-
-    try {
-        // Update ticket status
-        gestionFileService.updateTicketStatus(ticketId, action);
-
-        // Fetch the updated tickets list for the UI
-        List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
-        Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
-        Ticket currentTicket = currentTicketOptional.orElse(null);
-
-        // Add the updated data to the model
-        model.addAttribute("tickets", tickets);
-        model.addAttribute("currentTicket", currentTicket);
-        model.addAttribute("serviceId", serviceId);
-        model.addAttribute("locationId", locationId);
-        model.addAttribute("user", user);
-
-        return "agent_home"; // Return to agent page with updated ticket list
-    } catch (Exception e) {
-        log.error("Error updating ticket status: {}", e.getMessage());
-        model.addAttribute("error", "Unable to update ticket status: " + e.getMessage());
-        return "error"; // Handle errors gracefully
-    }
-}
-
-
-// @GetMapping("/agent/ticket/status")
-// public String updateTicketStatus(@RequestParam(required = false) Integer ticketId,
-//                                  @RequestParam(required = false) Integer serviceId,
-//                                  @RequestParam(required = false) Integer locationId,
-//                                  @RequestParam String action,
-//                                  Model model) {
-
-//     // Validate that all required parameters are present
-//     if (ticketId == null || serviceId == null || locationId == null || ticketId == 0) {
-//         model.addAttribute("error", "Missing required parameters.");
-//         return "error"; // Return to error page if parameters are missing
-//     }
-
-//     try {
-//         // Update ticket status
-//         gestionFileService.updateTicketStatus(ticketId, action);
-
-//         // Fetch the updated tickets list for the UI
-//         List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
-//         Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
-//         Ticket currentTicket = currentTicketOptional.orElse(null);
-
-//         // Add the updated data to the model
-//         model.addAttribute("tickets", tickets);
-//         model.addAttribute("currentTicket", currentTicket);
-//         model.addAttribute("serviceId", serviceId);
-//         model.addAttribute("locationId", locationId);
-
-//         return "agent_home"; // Return to agent page with updated ticket list
-//     } catch (Exception e) {
-//         log.error("Error updating ticket status: {}", e.getMessage());
-//         model.addAttribute("error", "Unable to update ticket status: " + e.getMessage());
-//         return "error"; // Handle errors gracefully
-//     }
-// }
-
-// agent
-
-@GetMapping("/agent")
-public String agentPage(Model model) {
-    model.addAttribute("services", gestionFileService.getAllServices());
-    model.addAttribute("locations", gestionFileService.getAllLocations());
-    return "agent";
-}
-
-@GetMapping("/agent_home")
-public String agentHomePage(Model model, HttpSession session) {
-    // Get the current authentication object
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-    String numeroTel = null;
-
-    // Check if the user is authenticated and extract the phone number
-    if (auth != null && auth.getPrincipal() instanceof UserDetails) {
-        numeroTel = ((UserDetails) auth.getPrincipal()).getUsername();
-    } else {
-        numeroTel = (String) session.getAttribute("numeroTel");
-    }
-
-    model.addAttribute("numeroTel", numeroTel != null ? numeroTel : "Non connecté");
-
-    // Retrieve user details from the database
-    Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
-
-    if (userOptional.isPresent()) {
         User user = userOptional.get();
-        Integer locationId = user.getLocationId();
-        Integer serviceId = user.getServiceId();
+        locationId = locationId == null ? user.getLocationId() : locationId;
+        serviceId = serviceId == null ? user.getServiceId() : serviceId;
 
-        model.addAttribute("user", user);
-        model.addAttribute("locationId", locationId);
-        model.addAttribute("serviceId", serviceId);
+        // Validate that all required parameters are present
+        if (ticketId == null || ticketId == 0) {
+            model.addAttribute("error", "Missing ticket ID.");
+            return "error"; // Return to error page if parameters are missing
+        }
 
-        // Fetch tickets based on service and location
-        List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
-        Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
-        Ticket currentTicket = currentTicketOptional.orElse(null);
+        try {
+            // Update ticket status
+            gestionFileService.updateTicketStatus(ticketId, action);
 
-        model.addAttribute("tickets", tickets);
-        model.addAttribute("currentTicket", currentTicket);
+            // Fetch the updated tickets list for the UI
+            List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
+            Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
+            Ticket currentTicket = currentTicketOptional.orElse(null);
+
+            // Add the updated data to the model
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("currentTicket", currentTicket);
+            model.addAttribute("serviceId", serviceId);
+            model.addAttribute("locationId", locationId);
+            model.addAttribute("user", user);
+
+            return "agent_home"; // Return to agent page with updated ticket list
+        } catch (Exception e) {
+            log.error("Error updating ticket status: {}", e.getMessage());
+            model.addAttribute("error", "Unable to update ticket status: " + e.getMessage());
+            return "error"; // Handle errors gracefully
+        }
     }
 
-    // Fetch and add services and locations to the model
-    model.addAttribute("services", gestionFileService.getAllServices());
-    model.addAttribute("locations", gestionFileService.getAllLocations());
-
-    return "agent_home";
-}
-
-
-@GetMapping("/agent/tickets")
-public String viewTickets(@RequestParam(required = false) Integer serviceId,
-                          @RequestParam(required = false) Integer locationId, 
-                          Model model) {
-    if (serviceId == null || locationId == null) {
-        log.warn("Missing serviceId or locationId");
-        model.addAttribute("error", "Please select both a service and a location.");
+    // agent
+    @GetMapping("/agent")
+    public String agentPage(Model model) {
         model.addAttribute("services", gestionFileService.getAllServices());
         model.addAttribute("locations", gestionFileService.getAllLocations());
         return "agent";
     }
-    // Proceed with fetching tickets
-    List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
-    Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
-    Ticket currentTicket = currentTicketOptional.orElse(null);
 
-    model.addAttribute("tickets", tickets);
-    model.addAttribute("currentTicket", currentTicket); 
-    model.addAttribute("services", gestionFileService.getAllServices());
-    model.addAttribute("locations", gestionFileService.getAllLocations());
+    @GetMapping("/agent_home") 
+    public String agentHomePage(Model model, HttpSession session) {
+        // Get the current authentication object
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-    return "agent";
-}
+        String numeroTel = null;
 
-@GetMapping("/ticket/{ticketId}")
-public String viewTicket(@PathVariable int ticketId, Model model) {
-    Ticket ticket = ticketRepository.findById(ticketId)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid ticket ID"));
+        // Check if the user is authenticated and extract the phone number
+        if (auth != null && auth.getPrincipal() instanceof UserDetails) {
+            numeroTel = ((UserDetails) auth.getPrincipal()).getUsername();
+        } else {
+            numeroTel = (String) session.getAttribute("numeroTel");
+        }
 
-    Optional<Ticket> currentTicket = gestionFileService.getCurrentTicket(ticket.getService().getId(), ticket.getLocation().getId());
+        model.addAttribute("numeroTel", numeroTel != null ? numeroTel : "Non connecté");
 
-    model.addAttribute("ticket", ticket);
-    model.addAttribute("currentTicket", currentTicket.orElse(null)); // Pass null if no ticket is found
-    return "ticket";
-}
+        // Retrieve user details from the database
+        Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
 
-// admin
-@GetMapping("/admin")
-public String adminBackoffice(Model model) {
-    // Retrieve all services and locations
-    List<OKService> services = gestionFileService.getAllServices();
-    List<Location> locations = gestionFileService.getAllLocations();
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            Integer locationId = user.getLocationId();
+            Integer serviceId = user.getServiceId();
 
-    model.addAttribute("services", services);
-    model.addAttribute("locations", locations);
+            model.addAttribute("user", user);
+            model.addAttribute("locationId", locationId);
+            model.addAttribute("serviceId", serviceId);
 
-    // Prepare a list to hold QueueInfo objects
-    List<QueueInfo> queueInfos = new ArrayList<>();
 
-    for (OKService service : services) {
-        for (Location location : locations) {
-            // Retrieve queue information for the given service and location
-            QueueInfo queueInfo = gestionFileService.getQueueInfo(service, location);
-            if (queueInfo != null) {
-                queueInfos.add(queueInfo);
+            // Fetch service and location names
+            Optional<Location> locationOptional = locationRepository.findById(locationId);
+            Optional<OKService> serviceOptional = serviceRepository.findById(serviceId);
+
+            String locationName = locationOptional.map(Location::getName).orElse("Non défini");
+            String serviceName = serviceOptional.map(OKService::getName).orElse("Non défini");
+
+            model.addAttribute("locationName", locationName);
+            model.addAttribute("serviceName", serviceName);
+
+            // Fetch tickets based on service and location
+            List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
+            Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
+            Ticket currentTicket = currentTicketOptional.orElse(null);
+
+            model.addAttribute("tickets", tickets);
+            model.addAttribute("currentTicket", currentTicket);
+        }
+
+        // Fetch and add services and locations to the model
+        model.addAttribute("services", gestionFileService.getAllServices());
+        model.addAttribute("locations", gestionFileService.getAllLocations());
+
+        return "agent_home";
+    }
+
+
+    @GetMapping("/agent/tickets")
+    public String viewTickets(@RequestParam(required = false) Integer serviceId,
+                            @RequestParam(required = false) Integer locationId, 
+                            Model model) {
+        if (serviceId == null || locationId == null) {
+            log.warn("Missing serviceId or locationId");
+            model.addAttribute("error", "Please select both a service and a location.");
+            model.addAttribute("services", gestionFileService.getAllServices());
+            model.addAttribute("locations", gestionFileService.getAllLocations());
+            return "agent";
+        }
+        // Proceed with fetching tickets
+        List<Ticket> tickets = gestionFileService.getTicketsByServiceAndLocation(serviceId, locationId);
+        Optional<Ticket> currentTicketOptional = gestionFileService.getCurrentTicket(serviceId, locationId);
+        Ticket currentTicket = currentTicketOptional.orElse(null);
+
+        model.addAttribute("tickets", tickets);
+        model.addAttribute("currentTicket", currentTicket); 
+        model.addAttribute("services", gestionFileService.getAllServices());
+        model.addAttribute("locations", gestionFileService.getAllLocations());
+
+        return "agent";
+    }
+
+    @GetMapping("/ticket/{ticketId}")
+    public String viewTicket(@PathVariable int ticketId, Model model) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid ticket ID"));
+
+        Optional<Ticket> currentTicket = gestionFileService.getCurrentTicket(ticket.getService().getId(), ticket.getLocation().getId());
+
+        model.addAttribute("ticket", ticket);
+        model.addAttribute("currentTicket", currentTicket.orElse(null)); // Pass null if no ticket is found
+        return "ticket";
+    }
+
+    // admin
+    @GetMapping("/admin")
+    public String adminBackoffice(Model model) {
+        // Retrieve all services and locations
+        List<OKService> services = gestionFileService.getAllServices();
+        List<Location> locations = gestionFileService.getAllLocations();
+
+        model.addAttribute("services", services);
+        model.addAttribute("locations", locations);
+
+        // Prepare a list to hold QueueInfo objects
+        List<QueueInfo> queueInfos = new ArrayList<>();
+
+        for (OKService service : services) {
+            for (Location location : locations) {
+                // Retrieve queue information for the given service and location
+                QueueInfo queueInfo = gestionFileService.getQueueInfo(service, location);
+                if (queueInfo != null) {
+                    queueInfos.add(queueInfo);
+                }
             }
         }
+
+        model.addAttribute("queueInfos", queueInfos);
+
+        return "admin";
     }
 
-    model.addAttribute("queueInfos", queueInfos);
 
-    return "admin";
-}
+    @GetMapping("/admin_home")
+    public String adminHomePage(Model model, HttpSession session) {
+        // Get the current authentication object
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
+        String numeroTel = null;
 
-@GetMapping("/admin_home")
-public String adminHomePage(Model model, HttpSession session) {
-    // Get the current authentication object
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        // Check if the user is authenticated and extract the phone number
+        if (auth != null && auth.getPrincipal() instanceof UserDetails) {
+            numeroTel = ((UserDetails) auth.getPrincipal()).getUsername();
+        } else {
+            numeroTel = (String) session.getAttribute("numeroTel");
+        }
 
-    String numeroTel = null;
+        model.addAttribute("numeroTel", numeroTel != null ? numeroTel : "Non connecté");
 
-    // Check if the user is authenticated and extract the phone number
-    if (auth != null && auth.getPrincipal() instanceof UserDetails) {
-        numeroTel = ((UserDetails) auth.getPrincipal()).getUsername();
-    } else {
-        numeroTel = (String) session.getAttribute("numeroTel");
-    }
+        // Retrieve user details from the database
+        Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
 
-    model.addAttribute("numeroTel", numeroTel != null ? numeroTel : "Non connecté");
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
 
-    // Retrieve user details from the database
-    Optional<User> userOptional = userRepository.findByNumeroTel(numeroTel);
+            model.addAttribute("user", user);
+        }
 
-    if (userOptional.isPresent()) {
-        User user = userOptional.get();
+        // Retrieve all services and locations
+        List<OKService> services = gestionFileService.getAllServices();
+        List<Location> locations = gestionFileService.getAllLocations();
 
-        model.addAttribute("user", user);
-    }
+        // Fetch and add services and locations to the model
+        model.addAttribute("services", gestionFileService.getAllServices());
+        model.addAttribute("locations", gestionFileService.getAllLocations());
 
-    // Retrieve all services and locations
-    List<OKService> services = gestionFileService.getAllServices();
-    List<Location> locations = gestionFileService.getAllLocations();
+        // Prepare a list to hold QueueInfo objects
+        List<QueueInfo> queueInfos = new ArrayList<>();
 
-    // Fetch and add services and locations to the model
-    model.addAttribute("services", gestionFileService.getAllServices());
-    model.addAttribute("locations", gestionFileService.getAllLocations());
-
-    // Prepare a list to hold QueueInfo objects
-    List<QueueInfo> queueInfos = new ArrayList<>();
-
-    for (OKService service : services) {
-        for (Location location : locations) {
-            // Retrieve queue information for the given service and location
-            QueueInfo queueInfo = gestionFileService.getQueueInfo(service, location);
-            if (queueInfo != null) {
-                queueInfos.add(queueInfo);
+        for (OKService service : services) {
+            for (Location location : locations) {
+                // Retrieve queue information for the given service and location
+                QueueInfo queueInfo = gestionFileService.getQueueInfo(service, location);
+                if (queueInfo != null) {
+                    queueInfos.add(queueInfo);
+                }
             }
         }
+
+        model.addAttribute("queueInfos", queueInfos);
+
+        return "admin_home";
     }
-
-    model.addAttribute("queueInfos", queueInfos);
-
-    return "admin_home";
-}
 
 
 
